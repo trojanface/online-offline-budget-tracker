@@ -158,15 +158,15 @@ function saveRecord(transactionOBJ) {
   request.onupgradeneeded = event => {
     const db = event.target.result;
 
-    // Creates an object store with a listID keypath that can be used to query on.
+    // Creates an object store.
     const backupDBStore = db.createObjectStore("backupDB", { autoIncrement: true });
-    // // Creates a statusIndex that we can query on.
+    // // Creates a schema
     backupDBStore.createIndex("nameIndex", "name");
     backupDBStore.createIndex("valueIndex", "value");
     backupDBStore.createIndex("dateIndex", "date");
   };
 
-  // Opens a transaction, accesses the toDoList objectStore and statusIndex.
+  // Opens a transaction, accesses the objectStore and adds the new value.
   request.onsuccess = () => {
     const db = request.result;
     const transaction = db.transaction(["backupDB"], "readwrite");
@@ -179,20 +179,20 @@ function saveRecord(transactionOBJ) {
   };
 }
 
-window.addEventListener("online", checkIndex);
+window.addEventListener("online", checkIndex); //checks if browser has come online
 
 function checkIndex() {
-  const request = window.indexedDB.open("backupDB", 1);
+  const request = window.indexedDB.open("backupDB", 1); //opens the database
   request.onsuccess = () => {
     const db = request.result;
     const transaction = db.transaction(["backupDB"], "readwrite");
     const backupDBStore = transaction.objectStore("backupDB");
-      let entries = backupDBStore.getAll();
+      let entries = backupDBStore.getAll();//gets all entries in backupDB
 
       entries.onsuccess = () => {
         fetch("/api/transaction/bulk", {
           method: "POST",
-          body: JSON.stringify(entries.result),
+          body: JSON.stringify(entries.result),//sends the entries in backupDB
           headers: {
             Accept: "application/json, text/plain, */*",
             "Content-Type": "application/json"
@@ -204,7 +204,7 @@ function checkIndex() {
           .catch(err => {
             console.log("Error saving IndexedDB");
           });
-          backupDBStore.clear();
+          backupDBStore.clear();//clears the database once done.
       }
   };
 }
