@@ -4,8 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "prestart": "webpack --watch",
-    "build": "webpack"
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
