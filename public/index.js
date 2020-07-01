@@ -145,9 +145,41 @@ function sendTransaction(isAdding) {
 }
 
 document.querySelector("#add-btn").onclick = function() {
-  sendTransaction(true);
+  //sendTransaction(true);
 };
 
 document.querySelector("#sub-btn").onclick = function() {
   sendTransaction(false);
 };
+function saveRecord(transaction) {
+  const request = window.indexedDB.open("backupDB", 1);
+
+  // Create schema
+  request.onupgradeneeded = event => {
+    const db = event.target.result;
+
+    // Creates an object store with a listID keypath that can be used to query on.
+    const backupDBStore = db.createObjectStore("backupDB", { autoIncrement: true });
+    // Creates a statusIndex that we can query on.
+    backupDBStore.createIndex("nameIndex", "name");
+    backupDBStore.createIndex("valueIndex", "value");
+    backupDBStore.createIndex("dateIndex", "date");
+  };
+
+  // Opens a transaction, accesses the toDoList objectStore and statusIndex.
+  request.onsuccess = () => {
+    const db = request.result;
+    const transaction = db.transaction(["backupDB"], "readwrite");
+    const backupDBStore = transaction.objectStore("backupDB");
+
+    // Adds data to our objectStore
+    backupDBStore.add({ name: transaction.name , value: transaction.value, date: transaction.date});
+ 
+  };
+}
+
+window.addEventListener("online", checkIndex);
+
+function checkIndex () {
+  
+}
