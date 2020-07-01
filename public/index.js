@@ -66,14 +66,14 @@ function populateChart() {
 
   myChart = new Chart(ctx, {
     type: 'line',
-      data: {
-        labels,
-        datasets: [{
-            label: "Total Over Time",
-            fill: true,
-            backgroundColor: "#6666ff",
-            data
-        }]
+    data: {
+      labels,
+      datasets: [{
+        label: "Total Over Time",
+        fill: true,
+        backgroundColor: "#6666ff",
+        data
+      }]
     }
   });
 }
@@ -111,7 +111,7 @@ function sendTransaction(isAdding) {
   populateChart();
   populateTable();
   populateTotal();
-  
+
   // also send to server
   fetch("/api/transaction", {
     method: "POST",
@@ -121,37 +121,37 @@ function sendTransaction(isAdding) {
       "Content-Type": "application/json"
     }
   })
-  .then(response => {    
-    return response.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      errorEl.textContent = "Missing Information";
-    }
-    else {
+    .then(response => {
+      return response.json();
+    })
+    .then(data => {
+      if (data.errors) {
+        errorEl.textContent = "Missing Information";
+      }
+      else {
+        // clear form
+        nameEl.value = "";
+        amountEl.value = "";
+      }
+    })
+    .catch(err => {
+      // fetch failed, so save in indexed db
+      saveRecord(transaction);
+
       // clear form
       nameEl.value = "";
       amountEl.value = "";
-    }
-  })
-  .catch(err => {
-    // fetch failed, so save in indexed db
-    saveRecord(transaction);
-
-    // clear form
-    nameEl.value = "";
-    amountEl.value = "";
-  });
+    });
 }
 
-document.querySelector("#add-btn").onclick = function() {
-  //sendTransaction(true);
+document.querySelector("#add-btn").onclick = function () {
+  sendTransaction(true);
 };
 
-document.querySelector("#sub-btn").onclick = function() {
+document.querySelector("#sub-btn").onclick = function () {
   sendTransaction(false);
 };
-function saveRecord(transaction) {
+function saveRecord(transactionOBJ) {
   const request = window.indexedDB.open("backupDB", 1);
 
   // Create schema
@@ -160,7 +160,7 @@ function saveRecord(transaction) {
 
     // Creates an object store with a listID keypath that can be used to query on.
     const backupDBStore = db.createObjectStore("backupDB", { autoIncrement: true });
-    // Creates a statusIndex that we can query on.
+    // // Creates a statusIndex that we can query on.
     backupDBStore.createIndex("nameIndex", "name");
     backupDBStore.createIndex("valueIndex", "value");
     backupDBStore.createIndex("dateIndex", "date");
@@ -173,13 +173,38 @@ function saveRecord(transaction) {
     const backupDBStore = transaction.objectStore("backupDB");
 
     // Adds data to our objectStore
-    backupDBStore.add({ name: transaction.name , value: transaction.value, date: transaction.date});
+    backupDBStore.add({ name: transactionOBJ.name , value: transactionOBJ.value, date: transactionOBJ.date});
  
+
   };
 }
 
 window.addEventListener("online", checkIndex);
 
-function checkIndex () {
-  
+function checkIndex() {
+  const request = window.indexedDB.open("backupDB", 1);
+  request.onsuccess = () => {
+    const db = request.result;
+    const transaction = db.transaction(["backupDB"], "readwrite");
+    const backupDBStore = transaction.objectStore("backupDB");
+      let entries = backupDBStore.getAll();
+
+      entries.onsuccess = () => {
+        fetch("/api/transaction/bulk", {
+          method: "POST",
+          body: JSON.stringify(entries.result),
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Content-Type": "application/json"
+          }
+        })
+          .then(response => {
+            return response.json();
+          })
+          .catch(err => {
+            console.log("Error saving IndexedDB");
+          });
+          backupDBStore.clear();
+      }
+  };
 }
